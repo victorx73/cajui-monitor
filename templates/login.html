@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login - Monitor Cajui</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root { --bg: #fafafa; --surface: #fff; --text: #171717; --border: #eee; --primary: #171717; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .box { background: var(--surface); padding: 2rem; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 350px; }
+    h1 { font-size: 1.2rem; margin-bottom: 1.5rem; text-align: center; }
+    input { width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; box-sizing: border-box; }
+    button { width: 100%; padding: 0.8rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .erro { color: #dc5656; font-size: 0.85rem; margin-bottom: 1rem; text-align: center; }
+</style>
+</head>
+<body>
+    <div class="box">
+        <h1>Entrar no Cajui</h1>
+        {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
+        <form method="POST" action="/login">
+            <input type="text" name="usuario" placeholder="Usuário" required>
+            <input type="password" name="senha" placeholder="Senha" required>
+            <button type="submit">Acessar Painel</button>
+        </form>
+    </div>
+</body>
+</html>
