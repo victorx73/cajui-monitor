@@ -1,6 +1,9 @@
 fastapi
 uvicorn
 jinja2
-requests
+httpx
 beautifulsoup4
+lxml
 python-multipart
+cryptography
+python-dotenv

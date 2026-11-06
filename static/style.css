@@ -1,0 +1,173 @@
+:root {
+    color-scheme: light dark;
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --text: #171717;
+    --muted: #888888;
+    --border: #eeeeee;
+    --green: #16a36a;
+    --red: #dc5656;
+    --green-soft: #eaf7f0;
+    --red-soft: #fdf0f0;
+    --primary: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #09090b;
+        --surface: #111113;
+        --text: #ededed;
+        --muted: #85858d;
+        --border: #252529;
+        --green: #42c98a;
+        --red: #f07878;
+        --green-soft: #14251e;
+        --red-soft: #2b1919;
+        --primary: #ededed;
+    }
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 48px 20px;
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    width: 100%;
+    max-width: 520px;
+    margin: auto;
+}
+
+/* HEADER */
+.header { margin-bottom: 38px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 38px; }
+.brand { font-size: 13px; font-weight: 600; letter-spacing: -0.3px; }
+.updated { font-size: 11px; color: var(--muted); }
+
+/* FREQUÊNCIA GERAL */
+.overview-label { font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 8px; }
+.overview-value {
+    font-size: clamp(58px, 15vw, 76px);
+    font-weight: 600;
+    letter-spacing: -6px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    margin-left: -4px;
+}
+.overview-value.danger { color: var(--red); }
+.overview-value.success { color: var(--green); }
+
+.overview-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 17px; }
+
+.status { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+.status-dot.success { background: var(--green); }
+
+.btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .2s;
+}
+.btn-refresh:hover { background: var(--bg); }
+.btn-refresh svg { width: 13px; height: 13px; }
+
+/* ALERTA */
+.alert {
+    display: flex; align-items: center; gap: 9px;
+    padding: 13px 0;
+    margin-bottom: 29px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--red);
+}
+.alert svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* DISCIPLINAS */
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 13px; }
+.section-title { font-size: 13px; font-weight: 600; letter-spacing: -0.3px; }
+.section-count { font-size: 11px; color: var(--muted); }
+
+.subject-list { border-top: 1px solid var(--border); }
+.subject { padding: 19px 0; border-bottom: 1px solid var(--border); }
+
+.subject-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.subject-name { font-size: 13px; font-weight: 500; letter-spacing: -0.2px; }
+.subject-percent { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.subject-percent.success { color: var(--green); }
+.subject-percent.danger { color: var(--red); }
+
+.subject-stats { display: flex; gap: 13px; margin-bottom: 12px; font-size: 11px; color: var(--muted); }
+.subject-stats strong { font-weight: 500; color: var(--text); }
+.subject-stats .present { color: var(--green); }
+.subject-stats .absent { color: var(--red); }
+
+/* PROGRESSO */
+.progress { height: 4px; width: 100%; background: var(--border); border-radius: 20px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: inherit; transition: width 0.6s ease; }
+.progress-fill.success { background: var(--green); }
+.progress-fill.danger { background: var(--red); }
+
+/* RODAPÉ */
+.footer {
+    margin-top: 35px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+}
+
+@media (max-width: 480px) {
+    body { padding: 30px 20px; }
+    .header { margin-bottom: 30px; }
+    .topbar { margin-bottom: 34px; }
+    .overview-value { font-size: 68px; }
+    .subject { padding: 17px 0; }
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.updating-pulse { animation: pulse 1.5s infinite; }
+
+/* ---- adições ---- */
+body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+.link-sair { font-size: 11px; color: var(--muted); text-decoration: none; }
+.link-sair:hover { color: var(--text); }
+.note { font-size: 11px; color: var(--muted); margin: -14px 0 22px; min-height: 16px; }
+.empty { padding: 28px 0; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.btn-refresh:disabled { opacity: .6; cursor: default; }
+[hidden] { display: none !important; }
+
+/* login */
+body.login { display: flex; justify-content: center; align-items: center; padding: 20px; }
+.box { background: var(--surface); padding: 2rem; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 350px; }
+.box h1 { font-size: 1.2rem; margin-bottom: 1.5rem; text-align: center; font-weight: 600; letter-spacing: -0.3px; }
+.box input { width: 100%; padding: .8rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 16px; background: var(--bg); color: var(--text); }
+.box button { width: 100%; padding: .8rem; background: var(--primary); color: var(--bg); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.box button:disabled { opacity: .6; }
+.erro { color: var(--red); font-size: .85rem; margin-bottom: 1rem; text-align: center; }
+.hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 14px; }

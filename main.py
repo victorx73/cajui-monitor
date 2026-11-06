@@ -1,129 +1,146 @@
+import asyncio
+import hashlib
 import os
 import time
-import json
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime
-from fastapi import FastAPI, Request, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 
-app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+from dotenv import load_dotenv
 
-# Variável global para manter a sessão (simulando um banco de dados em memória)
-sessions = {}
+load_dotenv()
 
-def fazer_login(usuario, senha):
-    session = requests.Session()
-    session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
-    
-    # 1. Pega o token de login
-    r = session.get("https://cajui.ifnmg.edu.br/cajui/login")
-    soup = BeautifulSoup(r.text, 'html.parser')
-    token = soup.find('input', {'name': '_csrf'})['value']
-    
-    # 2. Faz o login
-    payload = {
-        '_csrf': token,
-        'LoginForm[username]': usuario,
-        'LoginForm[password]': senha,
-        'login-button': ''
-    }
-    r_login = session.post("https://cajui.ifnmg.edu.br/cajui/login", data=payload)
-    
-    if "loginform-username" in r_login.text:
-        return None # Login falhou
-        
-    return session
+from fastapi import FastAPI, Form, Request  # noqa: E402
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+from jinja2 import Environment, FileSystemLoader, select_autoescape  # noqa: E402
 
-def pegar_dados(session):
-    r_painel = session.get("https://cajui.ifnmg.edu.br/portal")
-    soup = BeautifulSoup(r_painel.text, 'html.parser')
-    
-    materias = []
-    for el in soup.select('.sanfona'):
-        matricula_id = el.get('parametro')
-        oferta_id = el.get('oferta')
-        nome = el.find('b').text.strip()
-        materias.append({'id': matricula_id, 'oferta': oferta_id, 'nome': nome})
-        
-    token_csrf = soup.find('meta', {'name': 'csrf-token'})['content']
-    
-    dados_finais = []
-    for m in materias:
-        headers = {
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-Token': token_csrf
+import scraper  # noqa: E402
+from security import SESSION_MAX_AGE, login_bloqueado, pack, registrar_tentativa, unpack  # noqa: E402
+
+COOKIE_NAME = os.getenv("COOKIE_NAME", "cajui_session")
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+LIMITE = float(os.getenv("FREQUENCIA_MINIMA", "75"))
+CACHE_TTL = int(os.getenv("CACHE_TTL", "300"))
+REFRESH_MIN_INTERVAL = 20  # segundos entre "atualizar" forçados
+
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+jinja = Environment(loader=FileSystemLoader("templates"), autoescape=select_autoescape())
+
+
+def render(nome: str, **ctx) -> HTMLResponse:
+    return HTMLResponse(jinja.get_template(nome).render(**ctx))
+
+
+@app.middleware("http")
+async def headers_seguranca(request: Request, call_next):
+    resp = await call_next(request)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    resp.headers["Content-Security-Policy"] = (
+        "default-src 'self'; style-src 'self' https://fonts.googleapis.com; "
+        "font-src https://fonts.gstatic.com; img-src 'self' data:; "
+        "script-src 'self'; form-action 'self'; frame-ancestors 'none'"
+    )
+    if request.url.path.startswith("/api/") or request.url.path in ("/", "/painel"):
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+def ip_do_cliente(request: Request) -> str:
+    xff = request.headers.get("x-forwarded-for")
+    return xff.split(",")[0].strip() if xff else (request.client.host if request.client else "?")
+
+
+def cookies_da_sessao(request: Request) -> dict | None:
+    return unpack(request.cookies.get(COOKIE_NAME))
+
+
+# --- cache em memória (só otimização; perder no restart não afeta o login) ---
+_cache: dict[str, tuple[float, dict]] = {}
+_locks: dict[str, asyncio.Lock] = {}
+
+
+async def dados_com_cache(request: Request, cookies: dict, forcar: bool) -> dict:
+    chave = hashlib.sha256(request.cookies[COOKIE_NAME].encode()).hexdigest()
+    lock = _locks.setdefault(chave, asyncio.Lock())
+    async with lock:  # evita scrapes duplicados do mesmo usuário
+        hit = _cache.get(chave)
+        if hit:
+            idade = time.time() - hit[0]
+            if idade < (REFRESH_MIN_INTERVAL if forcar else CACHE_TTL):
+                return hit[1]
+        dados = await scraper.pegar_dados(cookies)
+        pres = sum(d["presencas"] for d in dados)
+        aulas = sum(d["total"] for d in dados)
+        payload = {
+            "dados": dados,
+            "geral": round(pres / aulas * 100, 1) if aulas else 100.0,
+            "limite": LIMITE,
+            "ts": int(time.time()),
         }
-        payload = {'matricula_id': m['id'], 'oferta_id': m['oferta']}
-        r_freq = session.post("https://cajui.ifnmg.edu.br/portal/aluno/painel/get-informacoes-matricula", headers=headers, data=payload)
-        
-        # Extrai os números
-        import re
-        match_pres = re.search(r'(\d+) Presenças', r_freq.text)
-        match_falt = re.search(r'(\d+) Faltas', r_freq.text)
-        
-        pres = int(match_pres.group(1)) if match_pres else 0
-        falt = int(match_falt.group(1)) if match_falt else 0
-        total = pres + falt
-        pct = (pres / total * 100) if total > 0 else 100.0
-        
-        dados_finais.append({
-            "nome": m['nome'], "presencas": pres, "faltas": falt, "total": total, "percentual": round(pct, 1)
-        })
-        
-    return dados_finais
+        _cache[chave] = (time.time(), payload)
+        return payload
 
-# --- Rotas ---
+
+# --- rotas ---
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+
+@app.get("/sw.js", include_in_schema=False)
+def service_worker():
+    return FileResponse("static/sw.js", media_type="application/javascript",
+                        headers={"Cache-Control": "no-cache"})
+
 
 @app.get("/", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    if cookies_da_sessao(request):
+        return RedirectResponse("/painel")
+    return render("login.html")
+
 
 @app.post("/login")
-def fazer_login_post(request: Request, usuario: str = Form(...), senha: str = Form(...)):
-    session = fazer_login(usuario, senha)
-    if not session:
-        return templates.TemplateResponse("login.html", {"request": request, "erro": "Usuário ou senha inválidos."})
-    
-    # Gera um ID de sessão simples (pode ser um UUID, mas para simplificar usamos o tempo)
-    session_id = str(time.time())
-    sessions[session_id] = session
-    
-    response = RedirectResponse(url="/painel", status_code=303)
-    response.set_cookie(key="session_id", value=session_id, httponly=True, max_age=86400) # 1 dia
-    return response
+async def login(request: Request, usuario: str = Form(...), senha: str = Form(...)):
+    ip = ip_do_cliente(request)
+    if login_bloqueado(ip):
+        return render("login.html", erro="Muitas tentativas. Aguarde alguns minutos.")
+    registrar_tentativa(ip)
+    try:
+        cookies = await scraper.fazer_login(usuario.strip(), senha)
+    except scraper.CajuiIndisponivel:
+        return render("login.html", erro="Cajuí indisponível no momento. Tente de novo.")
+    if not cookies:
+        return render("login.html", erro="Usuário ou senha inválidos.")
+    # a senha não é guardada em lugar nenhum: sai de escopo aqui
+    resp = RedirectResponse("/painel", status_code=303)
+    resp.set_cookie(COOKIE_NAME, pack(cookies), max_age=SESSION_MAX_AGE,
+                    httponly=True, secure=COOKIE_SECURE, samesite="lax")
+    return resp
+
 
 @app.get("/painel", response_class=HTMLResponse)
 def painel(request: Request):
-    session_id = request.cookies.get("session_id")
-    if not session_id or session_id not in sessions:
-        return RedirectResponse(url="/")
-    
-    session = sessions[session_id]
+    if not cookies_da_sessao(request):
+        return RedirectResponse("/")
+    return render("index.html", limite=LIMITE)
+
+
+@app.get("/api/faltas")
+async def api_faltas(request: Request, refresh: int = 0):
+    cookies = cookies_da_sessao(request)
+    if not cookies:
+        return JSONResponse({"erro": "Sessão expirada"}, status_code=401)
     try:
-        dados = pegar_dados(session)
-    except:
-        return RedirectResponse(url="/logout")
-        
-    pres_total = sum(d['presencas'] for d in dados)
-    aulas_total = sum(d['total'] for d in dados)
-    geral = round((pres_total / aulas_total * 100), 1) if aulas_total > 0 else 100.0
-    
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "dados": dados,
-        "geral": geral,
-        "atualizado": datetime.now().strftime("%H:%M"),
-        "limite": 75.0,
-        "erro": None,
-        "atualizando": False
-    })
+        return await dados_com_cache(request, cookies, bool(refresh))
+    except scraper.SessaoExpirada:
+        return JSONResponse({"erro": "Sessão expirada"}, status_code=401)
+    except scraper.CajuiIndisponivel:
+        return JSONResponse({"erro": "Cajuí indisponível no momento"}, status_code=502)
+
 
 @app.get("/logout")
-def logout(request: Request):
-    response = RedirectResponse(url="/")
-    response.delete_cookie("session_id")
-    return response
+def logout():
+    resp = RedirectResponse("/")
+    resp.delete_cookie(COOKIE_NAME)
+    return resp

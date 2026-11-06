@@ -2,28 +2,29 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Login - Monitor Cajui</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-    :root { --bg: #fafafa; --surface: #fff; --text: #171717; --border: #eee; --primary: #171717; }
-    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .box { background: var(--surface); padding: 2rem; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 350px; }
-    h1 { font-size: 1.2rem; margin-bottom: 1.5rem; text-align: center; }
-    input { width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; box-sizing: border-box; }
-    button { width: 100%; padding: 0.8rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit; }
-    .erro { color: #dc5656; font-size: 0.85rem; margin-bottom: 1rem; text-align: center; }
-</style>
+<meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="login">
     <div class="box">
         <h1>Entrar no Cajui</h1>
         {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
-        <form method="POST" action="/login">
-            <input type="text" name="usuario" placeholder="Usuário" required>
-            <input type="password" name="senha" placeholder="Senha" required>
+        <form method="POST" action="/login" id="form-login">
+            <input type="text" name="usuario" placeholder="Usuário" autocomplete="username" autocapitalize="none" required>
+            <input type="password" name="senha" placeholder="Senha" autocomplete="current-password" required>
             <button type="submit">Acessar Painel</button>
         </form>
+        <p class="hint">Sua senha não é armazenada.</p>
     </div>
+<script src="/static/pwa.js"></script>
+<script src="/static/login.js"></script>
 </body>
 </html>

@@ -1,60 +1,25 @@
 # Monitor Cajui
 
-Dashboard web para monitoramento de frequência acadêmica do sistema Cajui (IFNMG).
+Dashboard (PWA) para acompanhar a frequência no Cajuí (IFNMG). Projeto independente, sem vínculo oficial com o IFNMG.
 
-## Sobre o Projeto
+## Como funciona
+- **Sessão sem estado:** após o login, os cookies do Cajuí são criptografados (Fernet) e guardados no cookie do navegador. O servidor não guarda nada; reiniciar ou "dormir" não derruba o login. A senha nunca é armazenada.
+- **Scraping paralelo** (httpx + asyncio), com cache de 5 min e limite de concorrência (`MAX_WORKERS`).
+- **PWA:** instalável, abre na hora com o último resultado salvo no aparelho e atualiza em seguida.
 
-O **Monitor Cajui** é uma aplicação web desenvolvida para facilitar o acompanhamento da frequência escolar. A aplicação realiza a extração de dados do sistema acadêmico, calcula os índices de presença e identifica disciplinas com frequência inferior a 75%.
-
-O projeto possui uma interface responsiva, com abordagem Mobile-First e suporte a temas claro e escuro.
-
-## Funcionalidades
-
-- Login manual com usuário e senha.
-- Extração de dados em tempo real via Web Scraping.
-- Cálculo automático da frequência geral e por disciplina.
-- Alertas visuais para disciplinas abaixo de 75%.
-- Dashboard responsivo com foco em dispositivos móveis.
-- Suporte a Dark Mode.
-- Interface minimalista inspirada no Vercel e Linear.
-
-## Como rodar localmente
-
-**1. Clone o repositório**
-
-    git clone https://github.com/SEU-USUARIO/monitor-cajui.git
-    cd monitor-cajui
-
-**2. Crie e ative um ambiente virtual**
-
-    python -m venv venv
-
-Windows:
-
-    venv\Scripts\activate
-
-Linux:
-
-    source venv/bin/activate
-
-**3. Instale as dependências**
-
-    pip install fastapi uvicorn requests beautifulsoup4 jinja2
-
-**4. Execute a aplicação**
-
+## Rodar localmente
+    python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
+    pip install -r requirements.txt
+    cp .env.example .env    # gere a FERNET_KEY (comando no próprio arquivo)
     uvicorn main:app --reload
 
-Acesse: http://127.0.0.1:8000
+## Deploy no Render (grátis)
+1. Suba o repositório no GitHub (o `.env` fica fora, via `.gitignore`).
+2. Render → New → Blueprint → selecione o repositório (usa o `render.yaml`).
+3. Em Environment, defina `FERNET_KEY` (mesmo comando do `.env.example`).
+4. (Opcional) Aponte um monitor de uptime (ex.: UptimeRobot) para `/health` a cada 5-10 min para reduzir cold starts.
 
-## Deploy
+O plano grátis dorme após 15 min sem tráfego; a primeira abertura depois disso pode levar cerca de 1 min.
 
-O projeto foi desenvolvido com foco em compatibilidade com a **Vercel**, utilizando FastAPI no backend e tecnologias web na interface.
-
-## Aviso Legal
-
-Este é um projeto independente, desenvolvido para uso pessoal e fins educacionais.
-
-Não possui vínculo oficial, parceria ou associação com o Instituto Federal do Norte de Minas Gerais (IFNMG) ou com o sistema acadêmico Cajui.
-
-O projeto não é responsável por alterações, indisponibilidades ou inconsistências nos dados fornecidos pelo sistema original.
+## Instalar no celular
+Android/Chrome: menu → "Instalar app". iOS/Safari: Compartilhar → "Adicionar à Tela de Início".
