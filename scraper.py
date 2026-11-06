@@ -28,23 +28,30 @@ def _client(cookies: dict | None = None) -> httpx.AsyncClient:
 
 
 async def fazer_login(usuario: str, senha: str) -> dict | None:
-    """Devolve os cookies da sessão do Cajuí, ou None se as credenciais forem inválidas."""
     try:
         async with _client() as c:
             r = await c.get("/cajui/login")
             tag = BeautifulSoup(r.text, "lxml").find("input", {"name": "_csrf"})
+            log.warning("Cajuí GET login: status=%s url=%s csrf=%s tamanho=%s",
+                        r.status_code, r.url, bool(tag), len(r.text))
             if not tag:
-                raise CajuiIndisponivel("Formulário de login não encontrado.")
+                raise CajuiIndisponivel(f"Sem formulário de login (HTTP {r.status_code})")
+
             r = await c.post("/cajui/login", data={
                 "_csrf": tag["value"],
                 "LoginForm[username]": usuario,
                 "LoginForm[password]": senha,
                 "login-button": "",
             })
+            log.warning("Cajuí POST login: status=%s url=%s tem_form=%s",
+                        r.status_code, r.url, "loginform-username" in r.text)
+            if r.status_code in (403, 429, 503):
+                raise CajuiIndisponivel(f"HTTP {r.status_code}")
             if "loginform-username" in r.text:
                 return None
             return {ck.name: ck.value for ck in c.cookies.jar}
     except httpx.HTTPError as e:
+        log.warning("Cajuí erro de rede: %r", e)
         raise CajuiIndisponivel(str(e)) from e
 
 

@@ -108,7 +108,8 @@ async def login(request: Request, usuario: str = Form(...), senha: str = Form(..
     registrar_tentativa(ip)
     try:
         cookies = await scraper.fazer_login(usuario.strip(), senha)
-    except scraper.CajuiIndisponivel:
+    except scraper.CajuiIndisponivel as e:
+        scraper.log.warning("Cajuí indisponível: %r", e)
         return render("login.html", erro="Cajuí indisponível no momento. Tente de novo.")
     if not cookies:
         return render("login.html", erro="Usuário ou senha inválidos.")
