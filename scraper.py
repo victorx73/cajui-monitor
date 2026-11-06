@@ -1,10 +1,13 @@
 """Scraping assíncrono do Cajuí (httpx + BeautifulSoup)."""
 import asyncio
+import logging
 import os
 import re
 
 import httpx
 from bs4 import BeautifulSoup
+
+log = logging.getLogger("uvicorn.error")
 
 BASE = "https://cajui.ifnmg.edu.br"
 TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "20"))
